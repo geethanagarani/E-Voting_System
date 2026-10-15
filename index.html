@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChainVote - Privacy-Preserving E-Voting Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-800 px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center space-x-2.5">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white">ChainVote</h1>
+            <p class="text-xs text-slate-400">Hybrid Blockchain E-Voting Portal</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center space-x-1 bg-slate-900 p-1.5 rounded-xl border border-slate-800 text-sm font-medium w-full md:w-auto justify-center">
+        <button id="tabVote" onclick="switchTab('vote')" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-white bg-indigo-600 shadow-sm transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>Cast Ballot</span>
+        </button>
+        <button id="tabLedger" onclick="switchTab('ledger')" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-link"></i>
+          <span>Blockchain Ledger</span>
+        </button>
+        <button id="tabResults" onclick="switchTab('results')" class="flex-1 md:flex-none px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Live Tally</span>
+        </button>
+      </nav>
+
+      <!-- Connection & Settings -->
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+        <div id="statusBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="statusText">Connected to FastAPI</span>
+        </div>
+        <button onclick="toggleApiModal()" class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 hover:text-white transition flex items-center space-x-2">
+          <i class="fa-solid fa-plug text-indigo-400"></i>
+          <span>Config URL</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 lg:px-8 py-8">
+
+    <!-- TAB 1: CAST BALLOT -->
+    <section id="sectionVote" class="space-y-6 max-w-2xl mx-auto">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+        <div>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider inline-block mb-2">
+            Secure Voting Session
+          </span>
+          <h2 class="text-2xl font-bold text-white">Cast Your Encrypted Ballot</h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Enter your assigned Voter ID and select your candidate. Zero-knowledge blinding tokens ensure your vote remains anonymous on the ledger.
+          </p>
+        </div>
+
+        <form id="votingForm" onsubmit="submitVote(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Assigned Voter ID</label>
+            <div class="relative">
+              <i class="fa-solid fa-id-card absolute left-3.5 top-3.5 text-slate-500 text-xs"></i>
+              <input type="text" id="voterIdInput" required placeholder="e.g., voter_001" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Default registered IDs: <code class="text-indigo-400">voter_001</code>, <code class="text-indigo-400">voter_002</code>, <code class="text-indigo-400">voter_003</code>, <code class="text-indigo-400">voter_004</code></p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-2">Select Candidate</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="cursor-pointer border border-slate-800 bg-slate-950 hover:border-indigo-500 rounded-2xl p-4 flex flex-col items-center text-center transition group">
+                <input type="radio" name="candidate" value="Candidate A" required class="hidden peer">
+                <div class="w-10 h-10 rounded-full bg-slate-900 peer-checked:bg-indigo-600 flex items-center justify-center text-slate-400 peer-checked:text-white mb-2 transition">
+                  <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <span class="font-bold text-sm text-white">Candidate A</span>
+                <span class="text-[10px] text-slate-500">Innovation Party</span>
+              </label>
+
+              <label class="cursor-pointer border border-slate-800 bg-slate-950 hover:border-indigo-500 rounded-2xl p-4 flex flex-col items-center text-center transition group">
+                <input type="radio" name="candidate" value="Candidate B" class="hidden peer">
+                <div class="w-10 h-10 rounded-full bg-slate-900 peer-checked:bg-indigo-600 flex items-center justify-center text-slate-400 peer-checked:text-white mb-2 transition">
+                  <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <span class="font-bold text-sm text-white">Candidate B</span>
+                <span class="text-[10px] text-slate-500">Security Coalition</span>
+              </label>
+
+              <label class="cursor-pointer border border-slate-800 bg-slate-950 hover:border-indigo-500 rounded-2xl p-4 flex flex-col items-center text-center transition group">
+                <input type="radio" name="candidate" value="Candidate C" class="hidden peer">
+                <div class="w-10 h-10 rounded-full bg-slate-900 peer-checked:bg-indigo-600 flex items-center justify-center text-slate-400 peer-checked:text-white mb-2 transition">
+                  <i class="fa-solid fa-user-gear"></i>
+                </div>
+                <span class="font-bold text-sm text-white">Candidate C</span>
+                <span class="text-[10px] text-slate-500">Reform Alliance</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" id="btnSubmitVote" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition flex items-center justify-center space-x-2">
+            <span>Submit Encrypted Ballot</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <!-- Response Receipt Box -->
+        <div id="receiptBox" class="hidden bg-slate-950 rounded-2xl p-4 border border-emerald-500/30 space-y-2 text-xs">
+          <div class="flex items-center space-x-2 text-emerald-400 font-bold">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Ballot Successfully Recorded on Chain!</span>
+          </div>
+          <p class="text-slate-400">Blinded Ballot Token: <code id="receiptToken" class="text-indigo-300"></code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: BLOCKCHAIN LEDGER -->
+    <section id="sectionLedger" class="hidden space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h3 class="text-2xl font-bold text-white">Immutable Blockchain Ledger</h3>
+          <p class="text-xs text-slate-400">Inspect mined blocks, cryptographic hashes, and ballot chains</p>
+        </div>
+        <button onclick="fetchLedger()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl text-xs transition flex items-center space-x-2">
+          <i class="fa-solid fa-arrows-rotate text-indigo-400"></i>
+          <span>Refresh Chain</span>
+        </button>
+      </div>
+
+      <div id="ledgerContainer" class="space-y-4">
+        <!-- Rendered blocks dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 3: LIVE TALLY -->
+    <section id="sectionResults" class="hidden space-y-6 max-w-3xl mx-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h3 class="text-2xl font-bold text-white">Live Election Results Tally</h3>
+          <p class="text-xs text-slate-400">Cryptographically verified vote counts computed from the ledger</p>
+        </div>
+        <button onclick="fetchResults()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl text-xs transition flex items-center space-x-2">
+          <i class="fa-solid fa-arrows-rotate text-indigo-400"></i>
+          <span>Update Tally</span>
+        </button>
+      </div>
+
+      <div id="resultsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Tally cards rendered dynamically -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== API CONFIG MODAL ==================== -->
+  <div id="apiModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+      <button onclick="toggleApiModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400">
+          <i class="fa-solid fa-server"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Backend Connection</h3>
+          <p class="text-xs text-slate-400">Configure FastAPI ngrok endpoint</p>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">FastAPI ngrok URL</label>
+        <input type="text" id="apiEndpointInput" placeholder="https://xxxx.ngrok-free.app" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <button onclick="saveApiUrl()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition">
+        Save & Connect
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    let API_BASE_URL = localStorage.getItem("voting_api_url") || "https://your-ngrok-url.ngrok-free.app";
+    document.getElementById("apiEndpointInput").value = API_BASE_URL;
+
+    function toggleApiModal() {
+      document.getElementById("apiModal").classList.toggle("hidden");
+    }
+
+    function saveApiUrl() {
+      const val = document.getElementById("apiEndpointInput").value.trim().replace(/\/$/, "");
+      if (val) {
+        API_BASE_URL = val;
+        localStorage.setItem("voting_api_url", API_BASE_URL);
+        toggleApiModal();
+        alert("API URL updated successfully!");
+      }
+    }
+
+    function switchTab(tab) {
+      ['vote', 'ledger', 'results'].forEach(t => {
+        document.getElementById(`section${t.charAt(0).toUpperCase() + t.slice(1)}`).classList.add('hidden');
+        document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center justify-center space-x-2";
+      });
+
+      document.getElementById(`section${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.remove('hidden');
+      document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).className = "flex-1 md:flex-none px-4 py-2 rounded-lg text-white bg-indigo-600 shadow-sm transition flex items-center justify-center space-x-2";
+
+      if (tab === 'ledger') fetchLedger();
+      if (tab === 'results') fetchResults();
+    }
+
+    async function submitVote(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btnSubmitVote");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Processing Ballot...</span>`;
+
+      const voterId = document.getElementById("voterIdInput").value;
+      const candidate = document.querySelector('input[name="candidate"]:checked').value;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/vote`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true"
+          },
+          body: JSON.stringify({ voter_id: voterId, candidate_id: candidate })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Voting failed");
+
+        document.getElementById("receiptToken").innerText = data.receipt.ballot_token;
+        document.getElementById("receiptBox").classList.remove("hidden");
+        document.getElementById("votingForm").reset();
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Submit Encrypted Ballot</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+
+    async function fetchLedger() {
+      const container = document.getElementById("ledgerContainer");
+      container.innerHTML = `<div class="text-center py-12 text-slate-500"><i class="fa-solid fa-spinner animate-spin text-2xl mb-2"></i><p>Loading blockchain blocks...</p></div>`;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/chain`, { headers: { "ngrok-skip-browser-warning": "true" } });
+        const data = await res.json();
+        
+        container.innerHTML = "";
+        data.chain.forEach(block => {
+          const card = `
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Block #${block.index}</span>
+                <span class="text-[11px] text-slate-500">Timestamp: ${new Date(block.timestamp * 1000).toLocaleTimeString()}</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono text-slate-400">
+                <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 truncate"><strong>Hash:</strong> ${block.hash}</div>
+                <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 truncate"><strong>Prev Hash:</strong> ${block.previous_hash}</div>
+              </div>
+              <div>
+                <span class="text-xs font-semibold text-slate-300">Votes Contained (${block.votes_count}):</span>
+                <pre class="mt-1 bg-slate-950 p-3 rounded-xl text-xs text-indigo-300 overflow-x-auto border border-slate-800">${JSON.stringify(block.votes, null, 2)}</pre>
+              </div>
+            </div>
+          `;
+          container.innerHTML += card;
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="text-center py-12 text-rose-400"><p>Failed to connect to FastAPI backend. Check your ngrok configuration URL.</p></div>`;
+      }
+    }
+
+    async function fetchResults() {
+      const container = document.getElementById("resultsContainer");
+      container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500"><i class="fa-solid fa-spinner animate-spin text-2xl mb-2"></i><p>Calculating live tallies...</p></div>`;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/results`, { headers: { "ngrok-skip-browser-warning": "true" } });
+        const data = await res.json();
+        
+        container.innerHTML = "";
+        const results = data.election_results;
+        const candidates = ["Candidate A", "Candidate B", "Candidate C"];
+
+        candidates.forEach(cand => {
+          const votes = results[cand] || 0;
+          const card = `
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <div class="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto text-xl mb-3">
+                <i class="fa-solid fa-award"></i>
+              </div>
+              <h4 class="text-lg font-bold text-white">${cand}</h4>
+              <span class="text-3xl font-extrabold text-indigo-400 block">${votes}</span>
+              <span class="text-[11px] text-slate-500 uppercase tracking-wider">Total Verified Votes</span>
+            </div>
+          `;
+          container.innerHTML += card;
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-rose-400"><p>Failed to fetch election tallies.</p></div>`;
+      }
+    }
+  </script>
+</body>
+</html>
